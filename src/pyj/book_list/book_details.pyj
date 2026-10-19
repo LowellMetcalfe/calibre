@@ -834,7 +834,14 @@ def add_send_to_kindle_action(actions, book_id, metadata):
             if not configured or not formats:
                 return
             url = absolute_path('/send-to-kindle/ui/' + book_id) + '?library_id=' + encodeURIComponent(current_library_id())
-            window.open(url, '_blank')
+            create_custom_dialog(_('Send to Kindle'), def (parent, close_modal):
+                parent.appendChild(E.iframe(
+                    src=url,
+                    title=_('Send to Kindle'),
+                    style='width:min(34rem, 80vw); height:26rem; max-width:100%; border:0',
+                ))
+                parent.appendChild(E.div(class_='button-box', create_button(_('Close'), 'close', close_modal)))
+            )
         button = create_button(_('Send to Kindle'), 'send', open_send_to_kindle, tooltip)
         if not configured or not formats:
             button.setAttribute('aria-disabled', 'true')

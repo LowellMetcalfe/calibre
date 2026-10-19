@@ -49,15 +49,14 @@ class TestSendToKindlePlugin(BaseTest):
             ],
         )
 
-    def test_plugin_page_escapes_title_and_renders_only_supported_formats(self):
-        page = self.plugin_module.kindle_page_html(42, '<Book & title>', ['epub', 'pdf'])
-        self.assertIn('&lt;Book &amp; title&gt;', page)
+    def test_plugin_page_omits_redundant_title_and_renders_supported_formats(self):
+        page = self.plugin_module.kindle_page_html(42, ['epub', 'pdf'])
+        self.assertNotIn('<h1>', page)
+        self.assertNotIn('<p>Book', page)
+        self.assertNotIn('__BOOK_TITLE__', page)
         self.assertIn('const bookId = 42;', page)
         self.assertIn('<option value="epub">EPUB</option>', page)
         self.assertIn('<option value="pdf">PDF</option>', page)
-        placeholder_title = self.plugin_module.kindle_page_html(42, '__FORMAT_OPTIONS__', [])
-        self.assertIn('<p>__FORMAT_OPTIONS__</p>', placeholder_title)
-        self.assertNotIn('<p></p>', placeholder_title)
 
     def test_plugin_exposes_only_namespaced_routes(self):
         plugin = self.plugin_module.SendToKindlePlugin(None)

@@ -32,19 +32,34 @@ _KINDLE_PAGE = '''<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Send to Kindle — __BOOK_TITLE__</title>
+<title>Send to Kindle</title>
 <style>
-body { font: 16px system-ui, sans-serif; margin: 2rem auto; max-width: 34rem; padding: 0 1rem; }
+html { background: transparent; }
+body {
+    background: transparent;
+    color: inherit;
+    font: 16px system-ui, sans-serif;
+    margin: 0 auto;
+    max-width: 34rem;
+    padding: 0 1rem;
+}
 label { display: block; margin: 1rem 0; }
-select, input, button { box-sizing: border-box; font: inherit; padding: .5rem; width: 100%; }
+select, input, button {
+    background: transparent;
+    border: 1px solid currentColor;
+    border-radius: .25rem;
+    box-sizing: border-box;
+    color: inherit;
+    font: inherit;
+    padding: .5rem;
+    width: 100%;
+}
 button { cursor: pointer; margin-top: 1rem; }
 #status { min-height: 1.5em; }
 </style>
 </head>
 <body>
 <main>
-<h1>Send to Kindle</h1>
-<p>__BOOK_TITLE__</p>
 <label>Recipient
 <select id="recipient"></select>
 </label>
@@ -68,6 +83,23 @@ const format = document.getElementById('format');
 const sendButton = document.getElementById('send');
 const status = document.getElementById('status');
 const manualValue = '__new_recipient__';
+
+function syncDialogTheme() {
+    const frame = window.frameElement;
+    if (!frame) {
+        return;
+    }
+    for (let ancestor = frame.parentElement; ancestor && ancestor !== window.parent.document.body; ancestor = ancestor.parentElement) {
+        const style = window.parent.getComputedStyle(ancestor);
+        if (style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent') {
+            document.documentElement.style.backgroundColor = style.backgroundColor;
+            document.documentElement.style.backgroundImage = style.backgroundImage;
+            document.documentElement.style.colorScheme = style.colorScheme;
+            document.body.style.color = style.color;
+            return;
+        }
+    }
+}
 
 async function request(url, options) {
     const response = await fetch(url, options);
@@ -153,6 +185,7 @@ async function sendBook() {
 
 recipient.addEventListener('change', setRecipientMode);
 sendButton.addEventListener('click', sendBook);
+syncDialogTheme();
 if (!format.options.length) {
     status.textContent = 'This book has no format supported by Kindle email.';
     sendButton.disabled = true;
@@ -203,14 +236,13 @@ def sanitize_attachment_name(title, fmt):
     return f'{title[:160]}.{fmt.lower()}'
 
 
-def kindle_page_html(book_id, title, formats):
+def kindle_page_html(book_id, formats):
     options = ''.join(f'<option value="{escape(fmt, quote=True)}">{escape(fmt.upper())}</option>' for fmt in formats)
     values = {
-        '__BOOK_TITLE__': escape(str(title or 'Book')),
         '__BOOK_ID__': str(book_id),
         '__FORMAT_OPTIONS__': options,
     }
-    return re.sub(r'__BOOK_TITLE__|__BOOK_ID__|__FORMAT_OPTIONS__', lambda match: values[match.group()], _KINDLE_PAGE)
+    return re.sub(r'__BOOK_ID__|__FORMAT_OPTIONS__', lambda match: values[match.group()], _KINDLE_PAGE)
 
 
 def html_endpoint(ctx, rd, route, output):
@@ -373,10 +405,9 @@ class SendToKindlePlugin(ContentServerPlugin):
             if not ctx.has_id(rd, db, book_id):
                 raise BookNotFound(book_id, db)
             with db.safe_read_lock:
-                metadata = db.get_metadata(book_id, get_cover=False)
                 formats = {fmt.lower() for fmt in db.formats(book_id)}
             formats = [fmt for fmt in KINDLE_FORMAT_ORDER if fmt in formats]
-            return kindle_page_html(book_id, metadata.title, formats)
+            return kindle_page_html(book_id, formats)
 
         @endpoint('/send-to-kindle/recipients', postprocess=json_endpoint)
         def recipients(ctx, rd):

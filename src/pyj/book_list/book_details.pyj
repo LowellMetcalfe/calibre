@@ -6,7 +6,7 @@ import traceback
 from elementmaker import E
 from gettext import gettext as _
 
-from ajax import ajax, ajax_send, encode_query_component
+from ajax import absolute_path, ajax, ajax_send, encode_query_component
 from book_list.delete_book import refresh_after_delete, start_delete_book
 from book_list.globals import get_session_data
 from book_list.item_list import create_item, create_item_list, create_side_action
@@ -813,92 +813,6 @@ def kindle_email_formats(metadata):
     return ans
 
 
-def show_send_to_kindle_dialog(book_id, metadata, configured):
-    formats = kindle_email_formats(metadata)
-    create_custom_dialog(_('Send to Kindle'), def (parent, close_modal):
-        def close(ev=None):
-            if ev:
-                ev.preventDefault()
-            close_modal()
-
-        if not configured:
-            parent.appendChild(E.p(_('Configure a From address in Preferences → Sharing → Email before sending books.')))
-            parent.appendChild(E.div(class_='button-box', create_button(_('Close'), 'close', close)))
-            return
-        if not formats:
-            parent.appendChild(E.p(_('This book has no format supported by Kindle email.')))
-            parent.appendChild(E.div(class_='button-box', create_button(_('Close'), 'close', close)))
-            return
-
-        recipient = E.input(type='email', autocomplete='email', required='required', placeholder='name@kindle.com', style='width:100%; box-sizing:border-box')
-        fmt_select = E.select(style='width:100%; box-sizing:border-box')
-        for fmt in formats:
-            fmt_select.appendChild(E.option(fmt, value=fmt.lower()))
-        fields = E.div(style='display:grid; gap:0.8rem; min-width:min(18rem, 70vw)',
-            E.label(E.span(_('Kindle email address')), E.br(), recipient),
-            E.label(E.span(_('Book format')), E.br(), fmt_select),
-        )
-        status = E.div(role='status', aria_live='polite', style='margin-top:0.75rem; min-height:1.4em')
-        send_button = create_button(_('Send'), 'send', None, highlight=True)
-
-        def poll_status(job_id):
-            def on_status(end_type, xhr, ev):
-                if end_type is not 'load':
-                    status.textContent = _('Could not check email delivery status. Refresh the page and check again.')
-                    return
-                try:
-                    data = JSON.parse(xhr.responseText)
-                except Exception:
-                    status.textContent = _('The server returned an invalid email status.')
-                    return
-                status.textContent = data.message or ''
-                if data.state is 'queued' or data.state is 'sending':
-                    setTimeout(poll_status.bind(None, job_id), 1200)
-            ajax('/send-to-kindle/status/' + job_id, on_status).send()
-
-        def send(ev):
-            ev.preventDefault()
-            address = recipient.value.trim()
-            if not address or address.indexOf('@') < 1:
-                status.textContent = _('Enter a Kindle email address.')
-                recipient.focus()
-                return
-            send_button.setAttribute('aria-disabled', 'true')
-            status.textContent = _('Queuing book for email…')
-
-            def on_queued(end_type, xhr, event):
-                if end_type is not 'load':
-                    send_button.removeAttribute('aria-disabled')
-                    status.textContent = xhr.responseText or xhr.statusText or _('Could not queue the email.')
-                    return
-                try:
-                    data = JSON.parse(xhr.responseText)
-                    job_id = data.job_id
-                    if not job_id:
-                        raise ValueError('No job ID in response')
-                except Exception:
-                    send_button.removeAttribute('aria-disabled')
-                    status.textContent = _('The server returned an invalid response.')
-                    return
-                poll_status(job_id)
-
-            ajax_send('/send-to-kindle/book/' + book_id, {
-                'recipient': address,
-                'format': fmt_select.value,
-                'library_id': current_library_id(),
-            }, on_queued)
-
-        send_button.addEventListener('click', send)
-        recipient.addEventListener('keydown', def (ev):
-            if ev.key is 'Enter':
-                send(ev)
-        )
-        parent.appendChild(fields)
-        parent.appendChild(status)
-        parent.appendChild(E.div(class_='button-box', send_button, create_button(_('Cancel'), 'close', close)))
-    )
-
-
 def add_send_to_kindle_action(actions, book_id, metadata):
     def on_capabilities(end_type, xhr, ev):
         if end_type is not 'load':
@@ -916,8 +830,12 @@ def add_send_to_kindle_action(actions, book_id, metadata):
             tooltip = _('Configure the email From address in Preferences before sending')
         elif not formats:
             tooltip = _('This book has no format supported by Kindle email')
-        button = create_button(_('Send to Kindle'), 'send',
-            show_send_to_kindle_dialog.bind(None, book_id, metadata, configured), tooltip)
+        def open_send_to_kindle():
+            if not configured or not formats:
+                return
+            url = absolute_path('/send-to-kindle/ui/' + book_id) + '?library_id=' + encodeURIComponent(current_library_id())
+            window.open(url, '_blank')
+        button = create_button(_('Send to Kindle'), 'send', open_send_to_kindle, tooltip)
         if not configured or not formats:
             button.setAttribute('aria-disabled', 'true')
             button.style.opacity = '0.6'

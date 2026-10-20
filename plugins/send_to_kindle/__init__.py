@@ -43,7 +43,7 @@ body {
     max-width: 34rem;
     padding: 0 1rem;
 }
-label { display: block; margin: 1rem 0; }
+label { display: block; margin: .5rem 0; }
 select, input, button {
     background: transparent;
     border: 1px solid currentColor;
@@ -54,8 +54,14 @@ select, input, button {
     padding: .5rem;
     width: 100%;
 }
-button { cursor: pointer; margin-top: 1rem; }
-#status { min-height: 1.5em; }
+label[aria-disabled="true"] {
+    opacity: .55;
+}
+input:disabled {
+    cursor: not-allowed;
+}
+button { cursor: pointer; margin-top: .5rem; }
+#status { margin: .5rem 0 0; min-height: 1.5em; }
 </style>
 </head>
 <body>
@@ -63,8 +69,8 @@ button { cursor: pointer; margin-top: 1rem; }
 <label>Recipient
 <select id="recipient"></select>
 </label>
-<label id="manual-label" hidden>New Kindle email address
-<input id="manual-recipient" type="email" autocomplete="email" placeholder="name@kindle.com">
+<label id="manual-label">New Kindle email address
+<input id="manual-recipient" type="email" autocomplete="email" placeholder="name@kindle.com" disabled>
 </label>
 <label>Book format
 <select id="format">__FORMAT_OPTIONS__</select>
@@ -119,7 +125,8 @@ async function request(url, options) {
 
 function setRecipientMode() {
     const manual = recipient.value === manualValue;
-    manualLabel.hidden = !manual;
+    manualLabel.setAttribute('aria-disabled', String(!manual));
+    manualRecipient.disabled = !manual;
     manualRecipient.required = manual;
 }
 

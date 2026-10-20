@@ -838,7 +838,7 @@ def add_send_to_kindle_action(actions, book_id, metadata):
                 parent.appendChild(E.iframe(
                     src=url,
                     title=_('Send to Kindle'),
-                    style='width:min(34rem, 80vw); height:26rem; max-width:100%; border:0',
+                    style='width:min(34rem, 80vw); height:20rem; max-width:100%; border:0',
                 ))
                 parent.appendChild(E.div(class_='button-box', create_button(_('Close'), 'close', close_modal)))
             )

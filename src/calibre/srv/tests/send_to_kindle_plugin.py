@@ -57,6 +57,8 @@ class TestSendToKindlePlugin(BaseTest):
         self.assertIn('const bookId = 42;', page)
         self.assertIn('<option value="epub">EPUB</option>', page)
         self.assertIn('<option value="pdf">PDF</option>', page)
+        self.assertIn('id="manual-recipient" type="email" autocomplete="email" placeholder="name@kindle.com" disabled', page)
+        self.assertIn('manualRecipient.disabled = !manual;', page)
 
     def test_plugin_exposes_only_namespaced_routes(self):
         plugin = self.plugin_module.SendToKindlePlugin(None)

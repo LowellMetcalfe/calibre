@@ -49,6 +49,15 @@ class TestSendToKindlePlugin(BaseTest):
             ],
         )
 
+    def test_new_kindle_recipient_has_no_alias_or_automatic_delivery(self):
+        add_recipient = self.plugin_module.add_kindle_recipient
+        accounts, added = add_recipient({'reader@kindle.com': ['EPUB', False, False]}, 'new@kindle.com')
+        self.assertTrue(added)
+        self.assertEqual(accounts['new@kindle.com'], ['EPUB', False, False])
+        accounts, added = add_recipient(accounts, 'NEW@KINDLE.COM')
+        self.assertFalse(added)
+        self.assertEqual(len(accounts), 2)
+
     def test_plugin_page_omits_redundant_title_and_renders_supported_formats(self):
         page = self.plugin_module.kindle_page_html(42, ['epub', 'pdf'])
         self.assertNotIn('<h1>', page)

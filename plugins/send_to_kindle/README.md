@@ -27,10 +27,10 @@ and open in a dialog from the book page.
    enabled.
 
 Kindle delivery addresses configured in calibre's email preferences appear with
-their aliases; users can also enter an address manually. The plugin sends an
-existing EPUB, PDF, DOCX, RTF, TXT, HTM, or HTML format, up to 50 MiB, to an
-Amazon `@kindle.com`, `@kindle.cn`, `@free.kindle.com`, or
-`@free.kindle.cn` address.
+their aliases; a manually entered address is saved there without an alias for
+later use. The plugin sends an existing EPUB, PDF, DOCX, RTF, TXT, HTM, or HTML
+format, up to 50 MiB, to an Amazon `@kindle.com`, `@kindle.cn`,
+`@free.kindle.com`, or `@free.kindle.cn` address.
 
 The plugin keeps the attachment temporarily on the server while email is sent.
 Job status is private to the authenticated user who initiated the send and is

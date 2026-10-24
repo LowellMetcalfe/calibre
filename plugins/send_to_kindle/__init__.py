@@ -238,6 +238,40 @@ def configured_kindle_recipients(accounts, aliases):
     )
 
 
+def add_kindle_recipient(accounts, recipient):
+    """Add recipient to email preferences unless it is already configured."""
+    accounts = dict(accounts or {})
+    for address in accounts:
+        try:
+            if normalize_kindle_address(address).lower() == recipient.lower():
+                return accounts, False
+        except ValueError:
+            continue
+    # Keep the new recipient available to the normal Send by email action, but
+    # do not make it its default or enable automatic delivery.
+    accounts[recipient] = ['EPUB', False, False]
+    return accounts, True
+
+
+def save_kindle_recipient(recipient):
+    from calibre.utils.smtp import config as smtp_config
+
+    config = smtp_config()
+    opts = config.parse()
+    accounts, changed = add_kindle_recipient(opts.accounts, recipient)
+    if changed:
+        config.set('accounts', accounts)
+        aliases = dict(opts.aliases or {})
+        for address in tuple(aliases):
+            try:
+                if normalize_kindle_address(address).lower() == recipient.lower():
+                    aliases.pop(address)
+            except ValueError:
+                continue
+        if aliases != (opts.aliases or {}):
+            config.set('aliases', aliases)
+
+
 def sanitize_attachment_name(title, fmt):
     title = re.sub(r'[\\/\x00-\x1f]+', '_', str(title or 'Book')).strip(' .') or 'Book'
     return f'{title[:160]}.{fmt.lower()}'
@@ -361,6 +395,7 @@ def _start_send(ctx, rd, book_id):
                 pass
             raise
 
+    save_kindle_recipient(recipient)
     with _jobs_lock:
         _purge_expired_jobs()
         if sum(job['state'] in {'queued', 'sending'} for job in _jobs.values()) >= MAX_ACTIVE_JOBS:
